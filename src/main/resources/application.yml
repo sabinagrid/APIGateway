@@ -1,0 +1,112 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  main:
+    web-application-type: reactive
+
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      default-filters:
+        - TokenRelay
+        - RemoveRequestHeader=Cookie
+        - name: CircuitBreaker
+          args:
+            name: fallbackService
+            fallbackUri: forward:/fallback
+      routes:
+        - id: task-service
+          uri: lb://TASK-SERVICE
+          predicates:
+            - Path=/api/tasks/**
+          filters:
+            - TokenRelay
+            - RemoveRequestHeader=Cookie
+            - name: Retry
+              args:
+                retries: 3
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+        - id: user-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - TokenRelay
+            - RemoveRequestHeader=Cookie
+            - name: Retry
+              args:
+                retries: 3
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+        - id: report-service
+          uri: lb://REPORT-SERVICE
+          predicates:
+            - Path=/api/reports/**
+          filters:
+            - TokenRelay
+            - RemoveRequestHeader=Cookie
+            - name: Retry
+              args:
+                retries: 3
+                backoff:
+                  firstBackoff: 50ms
+                  maxBackoff: 500ms
+
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            issuer-uri: http://keycloak:8080/realms/taskmanagement
+        registration:
+          keycloak:
+            client-id: ${KEYCLOAK_CLIENT_ID}
+            client-secret: ${KEYCLOAK_CLIENT_SECRET}
+            scope: openid,profile,email
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8080/realms/taskmanagement
+          jwk-set-uri: http://keycloak:8080/realms/taskmanagement/protocol/openid-connect/certs
+    authorization:
+      roles:
+        - name: USER
+          privileges:
+            - view_tasks
+            - edit_own_tasks
+        - name: ADMIN
+          privileges:
+            - view_tasks
+            - edit_all_tasks
+            - manage_users
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, gateway
+  tracing:
+    sampling:
+      probability: 1.0
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG
+    reactor.netty.http.client: DEBUG
