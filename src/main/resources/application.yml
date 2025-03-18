@@ -77,17 +77,6 @@ spring:
         jwt:
           issuer-uri: http://keycloak:8080/realms/taskmanagement
           jwk-set-uri: http://keycloak:8080/realms/taskmanagement/protocol/openid-connect/certs
-    authorization:
-      roles:
-        - name: USER
-          privileges:
-            - view_tasks
-            - edit_own_tasks
-        - name: ADMIN
-          privileges:
-            - view_tasks
-            - edit_all_tasks
-            - manage_users
 
 eureka:
   client:
