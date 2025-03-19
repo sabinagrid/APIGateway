@@ -19,7 +19,7 @@ spring:
         - RemoveRequestHeader=Cookie
         - name: CircuitBreaker
           args:
-            name: fallbackService
+            name: gatewayCircuitBreaker
             fallbackUri: forward:/fallback
       routes:
         - id: task-service
@@ -33,8 +33,12 @@ spring:
               args:
                 retries: 3
                 backoff:
-                  firstBackoff: 50ms
-                  maxBackoff: 500ms
+                  firstBackoff: 100ms
+                  maxBackoff: 1s
+            - name: CircuitBreaker
+              args:
+                name: taskServiceCircuitBreaker
+                fallbackUri: forward:/fallback
         - id: user-service
           uri: lb://USER-SERVICE
           predicates:
@@ -46,8 +50,12 @@ spring:
               args:
                 retries: 3
                 backoff:
-                  firstBackoff: 50ms
-                  maxBackoff: 500ms
+                  firstBackoff: 100ms
+                  maxBackoff: 1s
+            - name: CircuitBreaker
+              args:
+                name: userServiceCircuitBreaker
+                fallbackUri: forward:/fallback
         - id: report-service
           uri: lb://REPORT-SERVICE
           predicates:
@@ -59,8 +67,12 @@ spring:
               args:
                 retries: 3
                 backoff:
-                  firstBackoff: 50ms
-                  maxBackoff: 500ms
+                  firstBackoff: 100ms
+                  maxBackoff: 1s
+            - name: CircuitBreaker
+              args:
+                name: reportServiceCircuitBreaker
+                fallbackUri: forward:/fallback
 
   security:
     oauth2:
@@ -77,6 +89,46 @@ spring:
         jwt:
           issuer-uri: http://keycloak:8080/realms/taskmanagement
           jwk-set-uri: http://keycloak:8080/realms/taskmanagement/protocol/openid-connect/certs
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      gatewayCircuitBreaker:
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+      taskServiceCircuitBreaker:
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+      userServiceCircuitBreaker:
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+      reportServiceCircuitBreaker:
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+
+  retry:
+    instances:
+      taskServiceRetry:
+        maxAttempts: 3
+        waitDuration: 200ms
+      userServiceRetry:
+        maxAttempts: 3
+        waitDuration: 200ms
+      reportServiceRetry:
+        maxAttempts: 3
+        waitDuration: 200ms
 
 eureka:
   client:
