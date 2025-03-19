@@ -89,10 +89,14 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics, gateway
+        include: health, info, metrics, prometheus, gateway
   tracing:
     sampling:
       probability: 1.0
+  metrics:
+    export:
+      prometheus:
+        enabled: true
 
 logging:
   level:
